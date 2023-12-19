@@ -1,3 +1,4 @@
+import os
 import re
 import subprocess
 
@@ -10,12 +11,28 @@ def solicitar_escolha(mensagem, opcoes):
         escolha = input(f"Digite sua escolha (1-{len(opcoes)}): ")
         if re.match(r"^\d+$", escolha) and 1 <= int(escolha) <= len(opcoes):
             return opcoes[int(escolha) - 1]
+        
+# Função para imprimir texto com cor
+def imprimir_com_cor(texto, cor):
+    cores = {
+        'verde': '\033[32m',
+        'amarelo': '\033[33m',
+        'reset': '\033[0m'
+    }
+    reset = cores['reset']
+    
+    if cor in cores:
+        cor_selecionada = cores[cor]
+        print(f"{cor_selecionada}{texto}{reset}")
+    else:
+        print(texto)
 
 # Solicitar URL do vídeo ao usuário
 video_url = input("Digite a URL do vídeo (m3u8): ")
 
 # Perguntar se o usuário deseja o vídeo completo ou segmentos específicos
 escolha = solicitar_escolha("Você quer o vídeo completo ou segmentos específicos?", ["Vídeo Completo", "Segmentos Específicos"])
+destino = input("Digite o caminho completo para o diretório de destino: ")
 
 if escolha == "Vídeo Completo":
     # Se o usuário desejar o vídeo completo, perguntar apenas o formato de saída
@@ -27,10 +44,13 @@ if escolha == "Vídeo Completo":
     nome_arquivo_saida = input("Digite o nome do arquivo de saída (sem extensão): ")
     saida = f"{nome_arquivo_saida}.{formato_saida}"
 
-    comando = f"ffmpeg.exe -i {video_url} -c copy {saida}"
-    print("Baixando o vídeo completo...")
+    # Caminho completo para o arquivo de saída
+    caminho_saida = os.path.join(destino, saida)
+    imprimir_com_cor(f"ffmpeg.exe -i {video_url} -c copy \"{caminho_saida}\"\n", 'amarelo')
+    comando = f"ffmpeg.exe -i {video_url} -c copy \"{caminho_saida}\""
+    imprimir_com_cor(f"Baixando o vídeo completo para {caminho_saida}...\n", 'amarelo')
     subprocess.run(comando, shell=True)
-    print(f"Download concluído: {saida}\n")
+    imprimir_com_cor(f"Download concluído: {caminho_saida}\n", 'verde')
 
 else:
     # Se o usuário desejar segmentos específicos, perguntar o horário de início, fim e outras informações para cada segmento
@@ -48,10 +68,13 @@ else:
 
         saida = f"{nome_arquivo_saida}.{formato_saida}"
 
+        # Construa o caminho completo para o arquivo de saída
+        caminho_saida = os.path.join(destino, saida)
+
         segmentos.append({
             "horario_inicio": horario_inicio,
             "horario_fim": horario_fim,
-            "nome_arquivo_saida": saida,
+            "nome_arquivo_saida": caminho_saida,  # Use o caminho completo
         })
 
         adicionar_mais_escolha = solicitar_escolha("Deseja adicionar mais segmentos?", ["Sim", "Não"])
@@ -61,9 +84,11 @@ else:
     for segmento in segmentos:
         inicio = segmento["horario_inicio"]
         fim = segmento["horario_fim"]
-        saida = segmento["nome_arquivo_saida"]
-
-        comando = f"ffmpeg.exe -i {video_url} -ss {inicio} -to {fim} -c copy {saida}"
-        print(f"Baixando o segmento de {inicio} a {fim}...")
+        caminho_saida = segmento["nome_arquivo_saida"]
+        imprimir_com_cor(f"ffmpeg.exe -i {video_url} -ss {inicio} -to {fim} -c copy \"{caminho_saida}\"\n", 'amarelo')
+        comando = f"ffmpeg.exe -i {video_url} -ss {inicio} -to {fim} -c copy \"{caminho_saida}\""
+        imprimir_com_cor(f"Baixando o segmento de {inicio} a {fim} para \"{caminho_saida}\"...\n", 'amarelo')
         subprocess.run(comando, shell=True)
-        print(f"Download do segmento concluído: {saida}\n")
+        imprimir_com_cor(f"Download do segmento concluído: {caminho_saida}\n", 'verde')
+
+input("Pressione enter para finalizar...")
